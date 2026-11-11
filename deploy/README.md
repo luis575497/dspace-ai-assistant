@@ -83,13 +83,13 @@ Entra a la vista de Conexión del panel y pulsa **Comprobar conexión**. Sin `DS
 
 ## 4. Abrir desde tu computadora
 
-El servicio escucha solo en `127.0.0.1` del LXC para no exponer el asistente sin una capa de autenticación. Desde tu computadora abre un túnel SSH:
+El servicio escucha en el LXC por su IP de red y requiere usuario/contraseña HTTP Basic. La instalación genera una contraseña aleatoria y la guarda en `/etc/dspace-ai-assistant.env` con permisos restringidos.
 
 ```bash
-ssh -L 5000:127.0.0.1:5000 root@IP_DEL_LXC_ASISTENTE
+grep '^APP_ACCESS_USER=\|^APP_ACCESS_PASSWORD=' /etc/dspace-ai-assistant.env
 ```
 
-Mientras la sesión SSH siga abierta, navega a `http://127.0.0.1:5000`. Para terminar, pulsa `Ctrl+C` en la terminal del túnel.
+Desde tu computadora navega a `http://IP_DEL_LXC_ASISTENTE:5000` e introduce esas credenciales cuando el navegador las solicite.
 
 ## 5. Actualizaciones de código
 

@@ -27,6 +27,15 @@ if [[ ! -f /etc/dspace-ai-assistant.env ]]; then
   SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')
   sed -i "s/^FLASK_SECRET_KEY=.*/FLASK_SECRET_KEY=$SECRET_KEY/" /etc/dspace-ai-assistant.env
 fi
+if ! grep -q '^APP_ACCESS_USER=.' /etc/dspace-ai-assistant.env; then
+  sed -i '/^APP_ACCESS_USER=/d' /etc/dspace-ai-assistant.env
+  echo 'APP_ACCESS_USER=admin' >> /etc/dspace-ai-assistant.env
+fi
+if ! grep -q '^APP_ACCESS_PASSWORD=.' /etc/dspace-ai-assistant.env; then
+  sed -i '/^APP_ACCESS_PASSWORD=/d' /etc/dspace-ai-assistant.env
+  ACCESS_PASSWORD=$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')
+  echo "APP_ACCESS_PASSWORD=$ACCESS_PASSWORD" >> /etc/dspace-ai-assistant.env
+fi
 install -m 0644 "$APP_DIR/deploy/dspace-ai-assistant.service" /etc/systemd/system/
 install -m 0644 "$APP_DIR/deploy/dspace-ai-update.service" /etc/systemd/system/
 install -m 0644 "$APP_DIR/deploy/dspace-ai-update.timer" /etc/systemd/system/
@@ -42,4 +51,6 @@ else
   echo "No hay remoto Git 'origin'; la actualización automática se habilitará al configurar uno."
 fi
 echo "Servicio iniciado. Configura /etc/dspace-ai-assistant.env y reinicia con: systemctl restart dspace-ai-assistant"
-echo "La aplicación escucha solo dentro del LXC en 127.0.0.1:5000."
+echo "URL: http://$(hostname -I | awk '{print $1}'):5000/"
+echo "Usuario de acceso: $(sed -n 's/^APP_ACCESS_USER=//p' /etc/dspace-ai-assistant.env | tail -n1)"
+echo "Contraseña de acceso: consulta /etc/dspace-ai-assistant.env (permisos 600)."

@@ -1,6 +1,7 @@
 import os
+import hmac
 
-from flask import Flask
+from flask import Flask, Response, request
 from dotenv import load_dotenv
 
 
@@ -19,6 +20,27 @@ def create_app():
     app.config["DSPACE_REST_URL"] = os.getenv("DSPACE_REST_URL", "").rstrip("/")
     app.config["DSPACE_EMAIL"] = os.getenv("DSPACE_EMAIL")
     app.config["DSPACE_PASSWORD"] = os.getenv("DSPACE_PASSWORD")
+    app.config["APP_ACCESS_USER"] = os.getenv("APP_ACCESS_USER", "")
+    app.config["APP_ACCESS_PASSWORD"] = os.getenv("APP_ACCESS_PASSWORD", "")
+
+    @app.before_request
+    def protect_application():
+        expected_user = app.config["APP_ACCESS_USER"]
+        expected_password = app.config["APP_ACCESS_PASSWORD"]
+        if not expected_user or not expected_password:
+            if request.remote_addr in {"127.0.0.1", "::1"}:
+                return None
+            return Response("Access credentials are not configured.", status=503)
+        credentials = request.authorization
+        valid_user = credentials and hmac.compare_digest(credentials.username or "", expected_user)
+        valid_password = credentials and hmac.compare_digest(credentials.password or "", expected_password)
+        if valid_user and valid_password:
+            return None
+        return Response(
+            "Authentication required.",
+            status=401,
+            headers={"WWW-Authenticate": 'Basic realm="DSpace Assistant"'},
+        )
 
     from app.routes import bp
     app.register_blueprint(bp)
