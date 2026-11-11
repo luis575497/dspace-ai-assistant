@@ -99,7 +99,7 @@ class DSpaceClient:
         max_pages = 100
         while page < max_pages:
             payload = self.get("discover/search/objects", params={
-                "dsoType": "item", "sort": "dateaccessioned,desc", "page": page, "size": 100,
+                "dsoType": "item", "sort": "dc.date.accessioned,desc", "page": page, "size": 100,
             })
             result = payload.get("_embedded", {}).get("searchResult", {})
             search_result = self._first_embedded(payload, "searchResults", "searchResult") or result
@@ -207,8 +207,10 @@ class DSpaceClient:
             collections_by_items = []
         try:
             publication_activity = self.publication_activity(12)
-        except DSpaceError:
+            publication_activity_error = None
+        except DSpaceError as exc:
             publication_activity = None
+            publication_activity_error = str(exc)
         current_year = datetime.now(timezone.utc).year
         counts["ingress_this_year"] = (
             sum(row["items"] for row in publication_activity if row["year"] == current_year)
@@ -228,6 +230,7 @@ class DSpaceClient:
             "counts": counts,
             "collections_by_items": collections_by_items,
             "publication_activity": publication_activity,
+            "publication_activity_error": publication_activity_error,
             "catalog_status": catalog_status,
             "usage": report_values,
             "monthly": report_months,

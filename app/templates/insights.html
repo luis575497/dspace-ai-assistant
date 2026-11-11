@@ -150,16 +150,22 @@ async function loadRepositoryStats(){
       document.getElementById('collection-count-badge').textContent=`${collectionRows.length} colecciones`;
       document.getElementById('overview-details').hidden=false;
     }
-    document.getElementById('publication-chart-panel').hidden=!hasPublicationActivity;
+    document.getElementById('publication-chart-panel').hidden=false;
     document.getElementById('collection-breakdown').hidden=collectionRows.length===0;
-    document.getElementById('overview-details').hidden=!(hasPublicationActivity||collectionRows.length>0);
+    document.getElementById('overview-details').hidden=false;
     document.getElementById('catalog-status-panel').hidden=!hasCatalogStatus;
     document.getElementById('catalog-panels').hidden=!hasCatalogStatus;
     if(hasCatalogStatus)renderCatalogStatus(data);
     document.querySelectorAll('#overview .kpi-value,#operations .kpi-value,#quality .qval,#usage .kpi-value').forEach(node=>node.textContent='—');
     const values=[['overview',0,data.counts.items],['overview',1,data.counts.ingress_this_year],['operations',3,data.counts.collections],['usage',0,views],['usage',1,downloads],['overview',3,downloads],['overview',2,data.counts.pending],['operations',1,data.counts.pending]];
     for(const [section,index,value] of values){const node=document.querySelectorAll('#'+section+' .kpi-value')[index];if(node)node.textContent=fmt(value)}
-    if(hasPublicationActivity)renderPublicationChart(data.publication_activity,Number(document.getElementById('publication-window').value));
+    if(hasPublicationActivity){
+      renderPublicationChart(data.publication_activity,Number(document.getElementById('publication-window').value));
+    }else{
+      const chart=document.getElementById('publication-chart');
+      chart.textContent=data.publication_activity_error||'No se pudo cargar la actividad de publicaciones desde DSpace.';
+      chart.className='chart emptyline';
+    }
     const ratio=views&&downloads?downloads/views:null;
     const ratioNode=document.querySelectorAll('#usage .kpi-value')[2];if(ratioNode)ratioNode.textContent=ratio==null?'—':ratio.toFixed(2);
     document.querySelectorAll('#overview .kpi-foot,#operations .kpi-foot,#usage .kpi-foot,#quality .qnote').forEach(node=>node.textContent='Detalle no disponible en los datos conectados');
@@ -172,11 +178,11 @@ async function loadRepositoryStats(){
       const section=document.getElementById(sectionId);
       section.querySelectorAll('.empty-state').forEach(node=>node.remove());
       for(const child of section.children){
-        const keep=child.matches('h2.section-title,p.section-intro,.grid.kpis')||(sectionId==='usage'&&hasSolr&&child.id==='usage-monthly-panel')||(sectionId==='overview'&&(hasPublicationActivity||collectionRows.length>0)&&child.id==='overview-details')||(sectionId==='overview'&&hasCatalogStatus&&child.id==='catalog-panels');
+        const keep=child.matches('h2.section-title,p.section-intro,.grid.kpis')||(sectionId==='usage'&&hasSolr&&child.id==='usage-monthly-panel')||(sectionId==='overview'&&child.id==='overview-details')||(sectionId==='overview'&&hasCatalogStatus&&child.id==='catalog-panels');
         child.hidden=!keep;
       }
       if(sectionId==='usage'&&hasSolr){renderUsageChart(solr.monthly_views,solr.monthly_downloads,solr.year);continue}
-      if(sectionId==='overview'&&(hasPublicationActivity||collectionRows.length>0||hasCatalogStatus))continue;
+      if(sectionId==='overview')continue;
       const state=document.createElement('div');state.className='empty-state';
       state.innerHTML=isEmpty?'<strong>Aún no hay registros</strong>Cuando agregues ítems al repositorio, aquí aparecerán los indicadores disponibles.':'<strong>Sin desglose disponible</strong>Los indicadores conectados se muestran arriba. Este detalle requiere una fuente de datos que todavía no está conectada.';
       section.append(state);
