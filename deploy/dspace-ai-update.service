@@ -3,4 +3,4 @@ Description=Update Bibliobytes DSpace Assistant source
 
 [Service]
 Type=oneshot
-ExecStart=/opt/dspace-ai-assistant/deploy/update.sh
+ExecStart=/bin/bash /opt/dspace-ai-assistant/deploy/update.sh

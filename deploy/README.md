@@ -47,8 +47,7 @@ No subas `.env`, claves de API ni contraseñas; están ignorados por Git. Si pre
 apt-get update && apt-get install -y git
 git clone https://github.com/USUARIO/REPOSITORIO.git /opt/dspace-ai-assistant
 cd /opt/dspace-ai-assistant
-chmod +x deploy/install.sh deploy/update.sh
-./deploy/install.sh
+bash deploy/install.sh
 ```
 
 Reemplaza `USUARIO` por tu nombre de GitHub. El instalador configura Flask/Gunicorn como servicio systemd y un timer que revisa `main` cada cinco minutos y reinicia el servicio cuando llega una actualización. Cuando hagamos un cambio futuro, deberá publicarse en `main` para que el LXC lo recoja automáticamente.
