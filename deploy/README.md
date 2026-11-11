@@ -32,9 +32,16 @@ pct enter "$CTID"
 
 Si los nombres de storage o la versión de plantilla no coinciden, usa los mostrados por los dos primeros comandos. Asigna al LXC una IP estable o reserva DHCP para que DSpace y tu equipo puedan encontrarlo.
 
-## 2. Publicar y clonar el código
+## 2. Publicar el código para habilitar actualizaciones
 
-El actualizador requiere un repositorio Git remoto. Publica el proyecto en un repositorio Git que controles; no subas `.env`, claves de API ni contraseñas. Desde el shell del LXC:
+El actualizador del LXC necesita un remoto Git. El checkout local ya está en la rama `main` y tiene commits, pero aún no tiene remoto. Desde tu PC, instala/inicia sesión en GitHub CLI con `gh auth login` y, dentro de la carpeta del proyecto, publica el repositorio abierto:
+
+```bash
+cd /ruta/a/dspace-ai-assistant
+gh repo create dspace-ai-assistant --public --source=. --remote=origin --push
+```
+
+No subas `.env`, claves de API ni contraseñas; están ignorados por Git. Si prefieres alojarlo en otra plataforma, crea allí un repositorio remoto y configura `origin` con su URL. Después, desde el shell del LXC:
 
 ```bash
 apt-get update && apt-get install -y git
@@ -44,7 +51,7 @@ chmod +x deploy/install.sh deploy/update.sh
 ./deploy/install.sh
 ```
 
-El comando de `git clone` es una plantilla: reemplaza la URL por la de tu repositorio. El instalador configura Flask/Gunicorn como servicio systemd y, si detecta `origin`, un timer que revisa `main` cada cinco minutos y reinicia el servicio cuando llega una actualización.
+Reemplaza `USUARIO` por tu nombre de GitHub. El instalador configura Flask/Gunicorn como servicio systemd y un timer que revisa `main` cada cinco minutos y reinicia el servicio cuando llega una actualización. Cuando hagamos un cambio futuro, deberá publicarse en `main` para que el LXC lo recoja automáticamente.
 
 ## 3. Conectar con DSpace
 
