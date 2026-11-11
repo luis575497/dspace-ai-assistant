@@ -58,6 +58,24 @@ class DSpaceClient:
         payload = self.get(path, params={"size": 1, "page": 0})
         return payload.get("page", {}).get("totalElements")
 
+    def collection_item_counts(self):
+        payload = self.get("core/collections", params={"size": 100, "page": 0})
+        collections = payload.get("_embedded", {}).get("collections", [])
+        result = []
+        for collection in collections:
+            uuid = collection.get("uuid") or collection.get("id")
+            if not uuid:
+                continue
+            metadata = collection.get("metadata", {})
+            titles = metadata.get("dc.title", [])
+            name = collection.get("name") or (titles[0].get("value") if titles else None) or "Colección sin título"
+            try:
+                items = self.count(f"core/collections/{uuid}/items")
+            except DSpaceError:
+                items = None
+            result.append({"id": uuid, "name": name, "items": items})
+        return sorted(result, key=lambda row: row["items"] or 0, reverse=True)
+
     @staticmethod
     def _first_embedded(payload, *keys):
         embedded = payload.get("_embedded", {})
@@ -103,6 +121,10 @@ class DSpaceClient:
             "collections": self.count("core/collections"),
         }
         try:
+            collections_by_items = self.collection_item_counts()
+        except DSpaceError:
+            collections_by_items = []
+        try:
             counts["pending"] = self.count("workflow/workflowitems")
         except DSpaceError:
             counts["pending"] = None
@@ -110,6 +132,7 @@ class DSpaceClient:
             "connected": True,
             "source": "dspace",
             "counts": counts,
+            "collections_by_items": collections_by_items,
             "usage": report_values,
             "monthly": report_months,
             "usage_error": usage_error,
