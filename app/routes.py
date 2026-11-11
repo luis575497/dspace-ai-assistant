@@ -1,6 +1,7 @@
 from io import BytesIO
 import json
 import os
+import requests
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -128,7 +129,12 @@ def save_dspace_config():
     if not email:
         password = ""
 
-    settings = {"url": url, "email": email, "password": password}
+    settings = {
+        **previous,
+        "url": url,
+        "email": email,
+        "password": password,
+    }
     config_path.parent.mkdir(parents=True, exist_ok=True)
     temp_path = config_path.with_suffix(".tmp")
     temp_path.write_text(json.dumps(settings), encoding="utf-8")
@@ -138,3 +144,96 @@ def save_dspace_config():
     current_app.config["DSPACE_EMAIL"] = email or None
     current_app.config["DSPACE_PASSWORD"] = password or None
     return jsonify(saved=True, url=url, email=email, has_credentials=bool(email and password))
+
+
+@bp.get("/api/config/solr")
+def get_solr_config():
+    return jsonify(
+        url=current_app.config.get("SOLR_STATISTICS_URL", ""),
+        user=current_app.config.get("SOLR_USER") or "",
+        has_credentials=bool(current_app.config.get("SOLR_USER") and current_app.config.get("SOLR_PASSWORD")),
+    )
+
+
+@bp.post("/api/config/solr")
+def save_solr_config():
+    origin = request.headers.get("Origin")
+    if origin and urlparse(origin).netloc != request.host:
+        return jsonify(error="Origen de solicitud no válido."), 403
+    payload = request.get_json(silent=True) or {}
+    url = str(payload.get("url", "")).strip().rstrip("/")
+    user = str(payload.get("user", "")).strip()
+    password = str(payload.get("password", ""))
+    parsed = urlparse(url)
+    if not url:
+        config_path = Path(current_app.config["DSPACE_CONFIG_PATH"])
+        try:
+            settings = json.loads(config_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            settings = {}
+        settings.update(solr_url="", solr_user="", solr_password="")
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = config_path.with_suffix(".tmp")
+        temp_path.write_text(json.dumps(settings), encoding="utf-8")
+        os.chmod(temp_path, 0o600)
+        os.replace(temp_path, config_path)
+        current_app.config["SOLR_STATISTICS_URL"] = ""
+        current_app.config["SOLR_USER"] = None
+        current_app.config["SOLR_PASSWORD"] = None
+        return jsonify(saved=True, url="", user="", has_credentials=False)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.username or parsed.password:
+        return jsonify(error="Ingresa la URL base del núcleo statistics de Solr."), 400
+    path = parsed.path.rstrip("/")
+    if not path.endswith("/statistics"):
+        return jsonify(error="La URL debe terminar en /solr/statistics."), 400
+    if bool(user) != bool(password) and not (user and not password):
+        return jsonify(error="Ingresa usuario y contraseña de Solr, o deja ambos vacíos."), 400
+
+    config_path = Path(current_app.config["DSPACE_CONFIG_PATH"])
+    try:
+        previous = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        previous = {}
+    if user and not password:
+        password = previous.get("solr_password") or current_app.config.get("SOLR_PASSWORD") or ""
+        if not password:
+            return jsonify(error="Ingresa la contraseña de Solr o borra el usuario si no usa autenticación."), 400
+    if not user:
+        password = ""
+    settings = {
+        "url": previous.get("url", current_app.config.get("DSPACE_REST_URL", "")),
+        "email": previous.get("email", current_app.config.get("DSPACE_EMAIL") or ""),
+        "password": previous.get("password", current_app.config.get("DSPACE_PASSWORD") or ""),
+        "solr_url": url,
+        "solr_user": user,
+        "solr_password": password,
+    }
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = config_path.with_suffix(".tmp")
+    temp_path.write_text(json.dumps(settings), encoding="utf-8")
+    os.chmod(temp_path, 0o600)
+    os.replace(temp_path, config_path)
+    current_app.config["SOLR_STATISTICS_URL"] = url
+    current_app.config["SOLR_USER"] = user or None
+    current_app.config["SOLR_PASSWORD"] = password or None
+    return jsonify(saved=True, url=url, user=user, has_credentials=bool(user and password))
+
+
+@bp.post("/api/config/solr/test")
+def test_solr_config():
+    url = current_app.config.get("SOLR_STATISTICS_URL", "").rstrip("/")
+    if not url:
+        return jsonify(connected=False, message="Guarda primero la URL de Solr."), 400
+    try:
+        auth = None
+        if current_app.config.get("SOLR_USER") and current_app.config.get("SOLR_PASSWORD"):
+            auth = (current_app.config["SOLR_USER"], current_app.config["SOLR_PASSWORD"])
+        response = requests.get(f"{url}/select", params={"q": "*:*", "rows": 0, "wt": "json"}, auth=auth, timeout=8)
+        response.raise_for_status()
+        result = response.json()
+        count = result.get("response", {}).get("numFound")
+        if count is None:
+            return jsonify(connected=False, message="Solr respondió, pero no devolvió numFound."), 502
+        return jsonify(connected=True, indexed_events=count)
+    except (requests.RequestException, ValueError):
+        return jsonify(connected=False, message="No se pudo consultar Solr. Verifica la URL, autenticación y acceso desde el LXC del asistente."), 502

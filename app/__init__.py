@@ -23,6 +23,9 @@ def create_app():
     app.config["DSPACE_EMAIL"] = os.getenv("DSPACE_EMAIL")
     app.config["DSPACE_PASSWORD"] = os.getenv("DSPACE_PASSWORD")
     app.config["DSPACE_CONFIG_PATH"] = str(Path(app.instance_path) / "dspace_config.json")
+    app.config["SOLR_STATISTICS_URL"] = os.getenv("SOLR_STATISTICS_URL", "").rstrip("/")
+    app.config["SOLR_USER"] = os.getenv("SOLR_USER")
+    app.config["SOLR_PASSWORD"] = os.getenv("SOLR_PASSWORD")
     app.config["APP_ACCESS_USER"] = os.getenv("APP_ACCESS_USER", "")
     app.config["APP_ACCESS_PASSWORD"] = os.getenv("APP_ACCESS_PASSWORD", "")
 
@@ -33,6 +36,9 @@ def create_app():
             app.config["DSPACE_REST_URL"] = settings.get("url", "").rstrip("/")
             app.config["DSPACE_EMAIL"] = settings.get("email") or None
             app.config["DSPACE_PASSWORD"] = settings.get("password") or None
+            app.config["SOLR_STATISTICS_URL"] = settings.get("solr_url", "").rstrip("/")
+            app.config["SOLR_USER"] = settings.get("solr_user") or None
+            app.config["SOLR_PASSWORD"] = settings.get("solr_password") or None
         except (OSError, ValueError):
             pass
 
