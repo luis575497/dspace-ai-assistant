@@ -10,6 +10,7 @@ from pypdf import PdfReader
 
 from app.ai import AIProviderError, generate
 from app.dspace import DSpaceError, repository_stats
+from app.solr import SolrError, usage_stats
 
 bp = Blueprint("main", __name__)
 
@@ -86,9 +87,14 @@ def repository_stats_api():
     if not current_app.config.get("DSPACE_REST_URL"):
         return jsonify(connected=False, demo=True, message="Configura DSPACE_REST_URL en .env para consultar estadísticas reales.")
     try:
-        return jsonify(repository_stats())
+        data = repository_stats()
     except DSpaceError as exc:
         return jsonify(connected=False, demo=False, message=str(exc)), 502
+    try:
+        data["solr_usage"] = usage_stats(request.args.get("year"))
+    except SolrError as exc:
+        data["solr_usage"] = {"connected": False, "message": str(exc)}
+    return jsonify(data)
 
 
 @bp.get("/api/config/dspace")
