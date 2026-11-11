@@ -1,5 +1,7 @@
 import os
 import hmac
+import json
+from pathlib import Path
 
 from flask import Flask, Response, request
 from dotenv import load_dotenv
@@ -20,11 +22,25 @@ def create_app():
     app.config["DSPACE_REST_URL"] = os.getenv("DSPACE_REST_URL", "").rstrip("/")
     app.config["DSPACE_EMAIL"] = os.getenv("DSPACE_EMAIL")
     app.config["DSPACE_PASSWORD"] = os.getenv("DSPACE_PASSWORD")
+    app.config["DSPACE_CONFIG_PATH"] = str(Path(app.instance_path) / "dspace_config.json")
     app.config["APP_ACCESS_USER"] = os.getenv("APP_ACCESS_USER", "")
     app.config["APP_ACCESS_PASSWORD"] = os.getenv("APP_ACCESS_PASSWORD", "")
 
+    def refresh_dspace_settings():
+        try:
+            with open(app.config["DSPACE_CONFIG_PATH"], encoding="utf-8") as settings_file:
+                settings = json.load(settings_file)
+            app.config["DSPACE_REST_URL"] = settings.get("url", "").rstrip("/")
+            app.config["DSPACE_EMAIL"] = settings.get("email") or None
+            app.config["DSPACE_PASSWORD"] = settings.get("password") or None
+        except (OSError, ValueError):
+            pass
+
+    refresh_dspace_settings()
+
     @app.before_request
     def protect_application():
+        refresh_dspace_settings()
         expected_user = app.config["APP_ACCESS_USER"]
         expected_password = app.config["APP_ACCESS_PASSWORD"]
         if not expected_user or not expected_password:

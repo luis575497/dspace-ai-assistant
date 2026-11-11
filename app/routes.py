@@ -1,4 +1,8 @@
 from io import BytesIO
+import json
+import os
+from pathlib import Path
+from urllib.parse import urlparse
 
 from flask import Blueprint, current_app, jsonify, redirect, render_template, request
 from pypdf import PdfReader
@@ -84,3 +88,53 @@ def repository_stats_api():
         return jsonify(repository_stats())
     except DSpaceError as exc:
         return jsonify(connected=False, demo=False, message=str(exc)), 502
+
+
+@bp.get("/api/config/dspace")
+def get_dspace_config():
+    return jsonify(
+        url=current_app.config.get("DSPACE_REST_URL", ""),
+        email=current_app.config.get("DSPACE_EMAIL") or "",
+        has_credentials=bool(current_app.config.get("DSPACE_EMAIL") and current_app.config.get("DSPACE_PASSWORD")),
+    )
+
+
+@bp.post("/api/config/dspace")
+def save_dspace_config():
+    origin = request.headers.get("Origin")
+    if origin and urlparse(origin).netloc != request.host:
+        return jsonify(error="Origen de solicitud no válido."), 403
+
+    payload = request.get_json(silent=True) or {}
+    url = str(payload.get("url", "")).strip().rstrip("/")
+    email = str(payload.get("email", "")).strip()
+    password = str(payload.get("password", ""))
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.username or parsed.password:
+        return jsonify(error="Ingresa una URL completa de DSpace, por ejemplo http://servidor:8080/server/api."), 400
+    if bool(email) != bool(password) and not (email and not password):
+        return jsonify(error="Para actualizar las credenciales, ingresa usuario y contraseña."), 400
+
+    config_path = Path(current_app.config["DSPACE_CONFIG_PATH"])
+    previous = {}
+    try:
+        previous = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        pass
+    if email and not password:
+        password = previous.get("password") or current_app.config.get("DSPACE_PASSWORD") or ""
+        if not password:
+            return jsonify(error="Ingresa la contraseña de la cuenta o deja ambos campos vacíos para usar acceso público."), 400
+    if not email:
+        password = ""
+
+    settings = {"url": url, "email": email, "password": password}
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = config_path.with_suffix(".tmp")
+    temp_path.write_text(json.dumps(settings), encoding="utf-8")
+    os.chmod(temp_path, 0o600)
+    os.replace(temp_path, config_path)
+    current_app.config["DSPACE_REST_URL"] = url
+    current_app.config["DSPACE_EMAIL"] = email or None
+    current_app.config["DSPACE_PASSWORD"] = password or None
+    return jsonify(saved=True, url=url, email=email, has_credentials=bool(email and password))
