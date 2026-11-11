@@ -1,6 +1,7 @@
 """Read-only DSpace REST connector for repository analytics."""
 
 import requests
+from datetime import datetime, timezone
 from flask import current_app
 
 
@@ -9,6 +10,8 @@ class DSpaceError(RuntimeError):
 
 
 class DSpaceClient:
+    MONTH_LABELS = ("Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic")
+
     def __init__(self):
         self.base_url = (current_app.config.get("DSPACE_REST_URL") or "").rstrip("/")
         if not self.base_url:
@@ -76,6 +79,84 @@ class DSpaceClient:
             result.append({"id": uuid, "name": name, "items": items})
         return sorted(result, key=lambda row: row["items"] or 0, reverse=True)
 
+    def publication_activity(self, months=12):
+        """Count archived items by their DSpace accession month, newest first."""
+        now = datetime.now(timezone.utc)
+        start_month = now.month - months + 1
+        start_year = now.year
+        while start_month <= 0:
+            start_month += 12
+            start_year -= 1
+        start = datetime(start_year, start_month, 1, tzinfo=timezone.utc)
+        buckets = {}
+        for offset in range(months):
+            month_index = start_month - 1 + offset
+            year = start_year + month_index // 12
+            month = month_index % 12 + 1
+            buckets[(year, month)] = 0
+
+        page = 0
+        max_pages = 100
+        while page < max_pages:
+            payload = self.get("discover/search/objects", params={
+                "dsoType": "item", "sort": "dateaccessioned,desc", "page": page, "size": 100,
+            })
+            result = payload.get("_embedded", {}).get("searchResult", {})
+            search_result = self._first_embedded(payload, "searchResults", "searchResult") or result
+            items = search_result.get("_embedded", {}).get("objects", [])
+            if not items:
+                break
+            stop = False
+            for hit in items:
+                item = hit.get("_embedded", {}).get("indexableObject", hit)
+                values = item.get("metadata", {}).get("dc.date.accessioned", [])
+                raw_date = values[0].get("value") if values else None
+                if not raw_date:
+                    item_uuid = item.get("uuid") or item.get("id")
+                    href = hit.get("_links", {}).get("indexableObject", {}).get("href", "")
+                    item_uuid = item_uuid or href.rstrip("/").split("/")[-1]
+                    if item_uuid:
+                        try:
+                            detailed_item = self.get(f"core/items/{item_uuid}")
+                            values = detailed_item.get("metadata", {}).get("dc.date.accessioned", [])
+                            raw_date = values[0].get("value") if values else None
+                        except DSpaceError:
+                            pass
+                if not raw_date:
+                    continue
+                try:
+                    accessioned = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
+                    if accessioned.tzinfo is None:
+                        accessioned = accessioned.replace(tzinfo=timezone.utc)
+                except (TypeError, ValueError):
+                    continue
+                if accessioned < start:
+                    stop = True
+                    break
+                key = (accessioned.year, accessioned.month)
+                if key in buckets:
+                    buckets[key] += 1
+            if stop or len(items) < 100:
+                break
+            page += 1
+
+        return [
+            {"year": year, "month": month, "label": f"{self.MONTH_LABELS[month - 1]} {year}", "items": count}
+            for (year, month), count in buckets.items()
+        ]
+
+    def catalog_status(self):
+        payload = self.get("contentreport/filteredcollections", params={
+            "filters": "has_one_original,has_multiple_originals,has_no_originals,is_discoverable,has_restricted_original",
+        })
+        summary = payload.get("summary", {}).get("values", {})
+        return {
+            "with_files": (summary.get("has_one_original", 0) or 0) + (summary.get("has_multiple_originals", 0) or 0),
+            "without_files": summary.get("has_no_originals"),
+            "discoverable": summary.get("is_discoverable"),
+            "restricted_files": summary.get("has_restricted_original"),
+        }
+
     @staticmethod
     def _first_embedded(payload, *keys):
         embedded = payload.get("_embedded", {})
@@ -125,6 +206,19 @@ class DSpaceClient:
         except DSpaceError:
             collections_by_items = []
         try:
+            publication_activity = self.publication_activity(12)
+        except DSpaceError:
+            publication_activity = None
+        current_year = datetime.now(timezone.utc).year
+        counts["ingress_this_year"] = (
+            sum(row["items"] for row in publication_activity if row["year"] == current_year)
+            if publication_activity is not None else None
+        )
+        try:
+            catalog_status = self.catalog_status()
+        except DSpaceError:
+            catalog_status = None
+        try:
             counts["pending"] = self.count("workflow/workflowitems")
         except DSpaceError:
             counts["pending"] = None
@@ -133,6 +227,8 @@ class DSpaceClient:
             "source": "dspace",
             "counts": counts,
             "collections_by_items": collections_by_items,
+            "publication_activity": publication_activity,
+            "catalog_status": catalog_status,
             "usage": report_values,
             "monthly": report_months,
             "usage_error": usage_error,
