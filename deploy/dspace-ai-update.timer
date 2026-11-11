@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for Bibliobytes DSpace Assistant updates
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Persistent=true
+Unit=dspace-ai-update.service
+
+[Install]
+WantedBy=timers.target

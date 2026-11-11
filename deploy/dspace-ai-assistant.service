@@ -1,0 +1,22 @@
+[Unit]
+Description=Bibliobytes DSpace Assistant
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dspace-ai
+Group=dspace-ai
+WorkingDirectory=/opt/dspace-ai-assistant
+EnvironmentFile=/etc/dspace-ai-assistant.env
+ExecStart=/opt/dspace-ai-assistant/.venv/bin/gunicorn --workers 2 --bind 127.0.0.1:5000 --access-logfile - run:app
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/dspace-ai-assistant/instance
+
+[Install]
+WantedBy=multi-user.target

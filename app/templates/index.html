@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bibliobytes AI · Repositorio</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="#"><span class="brand-icon">b</span><span>Bibliobytes<span class="muted"> / AI</span></span></a>
+    <div class="side-label">ESPACIO DE TRABAJO</div>
+    <a class="nav active" href="#overview"><span>◫</span> Resumen</a>
+    <a class="nav" href="#assistant"><span>✳</span> Asistente IA</a>
+    <a class="nav" href="/insights"><span>▥</span> Estadísticas del repositorio</a>
+    <a class="nav" href="#settings"><span>⚙</span> Configuración</a>
+    <div class="sidebar-bottom"><div class="privacy-dot"></div><div><b>Procesamiento privado</b><small>Proveedor institucional</small></div></div>
+  </aside>
+  <main id="overview">
+    <header><div class="crumb">Repositorio <span>/</span> Panel de inteligencia</div><div class="profile"><span class="status"><i></i> Sistema operativo</span><div class="avatar">U</div></div></header>
+    <section class="welcome"><div><div class="eyebrow">PANEL DEL REPOSITORIO</div><h1>Inteligencia para tu conocimiento.</h1><p>Explora documentos, obtén ideas clave y encuentra respuestas con fuentes verificables.</p></div><button class="lang" id="language">ES <span>⌄</span></button></section>
+    <section class="metrics" id="stats">
+      <article class="metric"><div class="metric-top"><span>Documentos procesados</span><span class="metric-icon violet">▤</span></div><strong>1,284</strong><small><em>+12.8%</em> respecto al mes pasado</small><div class="spark"><b style="height:28%"></b><b style="height:40%"></b><b style="height:33%"></b><b style="height:57%"></b><b style="height:49%"></b><b style="height:72%"></b><b style="height:64%"></b><b style="height:94%"></b></div></article>
+      <article class="metric"><div class="metric-top"><span>Consultas respondidas</span><span class="metric-icon blue">✳</span></div><strong>8,932</strong><small><em>+8.4%</em> respecto al mes pasado</small><div class="spark blue-bars"><b style="height:38%"></b><b style="height:52%"></b><b style="height:44%"></b><b style="height:68%"></b><b style="height:62%"></b><b style="height:80%"></b><b style="height:73%"></b><b style="height:96%"></b></div></article>
+      <article class="metric"><div class="metric-top"><span>Tiempo medio de respuesta</span><span class="metric-icon green">◷</span></div><strong>4.8 <small class="unit">seg</small></strong><small><em>−0.6 seg</em> de mejora este mes</small><div class="spark green-bars"><b style="height:85%"></b><b style="height:72%"></b><b style="height:78%"></b><b style="height:56%"></b><b style="height:62%"></b><b style="height:42%"></b><b style="height:46%"></b><b style="height:27%"></b></div></article>
+    </section>
+    <section class="content-grid">
+      <article class="panel assistant" id="assistant">
+        <div class="panel-heading"><div><div class="eyebrow">ASISTENTE DE INVESTIGACIÓN</div><h2>Comprende más, en menos tiempo.</h2></div><span class="ai-badge">✳ Generado con IA</span></div>
+        <p class="subtext">Carga un documento PDF para obtener un resumen y sus conceptos más relevantes.</p>
+        <form id="upload-form"><label class="dropzone" for="document"><span class="upload-icon">↑</span><b>Arrastra un PDF aquí o <u>explora archivos</u></b><small>PDF · Máximo 30 MB</small><input id="document" name="document" type="file" accept="application/pdf,.pdf" required></label><button class="primary" type="submit">✳ &nbsp; Analizar documento <span>→</span></button></form>
+        <div class="result" id="result" hidden></div>
+        <div class="privacy-note"><span>◈</span> Tu institución controla qué modelo procesa los documentos.</div>
+        <div class="qa-block"><div class="eyebrow">PREGUNTA AL DOCUMENTO</div><p class="subtext">Pregunta en español o inglés y recibe una respuesta basada en el PDF con referencias a páginas.</p><form id="ask-form"><label class="question-field"><input name="question" placeholder="¿Cuál es la idea principal del documento?" required><button aria-label="Enviar pregunta">↑</button></label><input class="qa-file" type="file" name="document" accept="application/pdf,.pdf" required><small class="qa-hint">Adjunta el PDF para esta pregunta · La integración con DSpace añadirá permisos por usuario.</small></form><div class="result" id="answer" hidden></div></div>
+      </article>
+      <article class="panel insights"><div class="panel-heading"><div><div class="eyebrow">ACTIVIDAD</div><h2>Uso del asistente</h2></div><button class="select">Últimos 12 meses⌄</button></div><div class="chart-head"><b>Consultas a documentos</b><span><i></i> Preguntas respondidas</span></div><div class="chart"><div class="y-axis"><span>1.2k</span><span>900</span><span>600</span><span>300</span><span>0</span></div><div class="plot"><div class="gridlines"><i></i><i></i><i></i><i></i><i></i></div><svg viewBox="0 0 600 180" preserveAspectRatio="none" aria-label="Consultas mensuales"><defs><linearGradient id="fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#7664f5" stop-opacity=".2"/><stop offset="1" stop-color="#7664f5" stop-opacity="0"/></linearGradient></defs><path d="M0 145 C25 140 25 128 55 132 S90 118 110 123 S145 105 165 111 S200 91 220 104 S255 78 275 84 S310 97 330 75 S365 62 385 74 S420 52 440 59 S475 42 495 54 S530 25 550 38 S580 18 600 14 V180 H0Z" fill="url(#fill)"/><path d="M0 145 C25 140 25 128 55 132 S90 118 110 123 S145 105 165 111 S200 91 220 104 S255 78 275 84 S310 97 330 75 S365 62 385 74 S420 52 440 59 S475 42 495 54 S530 25 550 38 S580 18 600 14" fill="none" stroke="#7664f5" stroke-width="3" vector-effect="non-scaling-stroke"/></svg><div class="months"><span>Dic</span><span>Ene</span><span>Feb</span><span>Mar</span><span>Abr</span><span>May</span><span>Jun</span><span>Jul</span><span>Ago</span><span>Sep</span><span>Oct</span><span>Nov</span></div></div></div><div class="language-stat"><div><b>Idiomas de consulta</b><span>Distribución de uso</span></div><div class="language-bars"><div><span>Español</span><b>68%</b><i><em style="width:68%"></em></i></div><div><span>English</span><b>32%</b><i><em style="width:32%"></em></i></div></div></div><p class="demo-label">Datos de demostración · Se conectarán a métricas reales</p></article>
+    </section>
+    <footer><span>Bibliobytes AI <b>·</b> Asistencia transparente para el conocimiento</span><span>Los resultados pueden contener errores. Verifica siempre las fuentes.</span></footer>
+  </main>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
