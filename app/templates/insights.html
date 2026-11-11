@@ -91,6 +91,7 @@ async function loadRepositoryStats(){
       document.getElementById('stats-source').innerHTML='<span class="alertico">ℹ</span><div><strong>Estadísticas no disponibles.</strong> '+data.message+'</div>';
       return;
     }
+    const fmt=value=>value==null?'—':new Intl.NumberFormat('es').format(value);
     document.getElementById('data-badge').textContent='● DSpace conectado';
     document.getElementById('data-badge').className='badge green';
     const solr=data.solr_usage||{};
@@ -99,7 +100,6 @@ async function loadRepositoryStats(){
     document.getElementById('stats-source').innerHTML=hasSolr
       ?`<span class="alertico">✓</span><div><strong>DSpace y Solr conectados.</strong> ${fmt(solr.events)} eventos totales en Solr; ${fmt(solr.views)} visitas a ítems. El gráfico mensual se calcula con eventos reales${isEmpty?'; todavía no hay ítems publicados.':'.'}</div>`
       :`<span class="alertico">ℹ</span><div><strong>DSpace conectado.</strong> ${solr.message||'Configura Solr en Conexión para cargar las estadísticas de uso.'}</div>`;
-    const fmt=value=>value==null?'—':new Intl.NumberFormat('es').format(value);
     const views=hasSolr?solr.views:data.usage?.views;
     document.querySelectorAll('#overview .kpi-value,#operations .kpi-value,#quality .qval,#usage .kpi-value').forEach(node=>node.textContent='—');
     const values=[['overview',0,data.counts.items],['operations',3,data.counts.collections],['usage',0,views],['usage',1,data.usage?.downloads],['overview',3,data.usage?.downloads],['overview',2,data.counts.pending],['operations',1,data.counts.pending]];
