@@ -26,7 +26,12 @@ def _request(params):
         response = requests.get(f"{base_url}/select", params=params, auth=auth, timeout=12)
         response.raise_for_status()
         payload = response.json()
+    except requests.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else "desconocido"
+        current_app.logger.warning("Solr rechazó la consulta de estadísticas (HTTP %s).", status)
+        raise SolrError(f"Solr rechazó la consulta de estadísticas (HTTP {status}).") from exc
     except (requests.RequestException, ValueError) as exc:
+        current_app.logger.warning("Falló la consulta de estadísticas a Solr: %s", exc)
         raise SolrError("No se pudieron consultar las estadísticas de Solr.") from exc
     if payload.get("responseHeader", {}).get("status") != 0:
         raise SolrError("Solr devolvió un error al consultar las estadísticas.")
@@ -44,7 +49,8 @@ def usage_stats(year=None):
     if selected_year < 2000 or selected_year > current_year + 1:
         selected_year = current_year
 
-    common = "statistics_type:view AND type:item AND -isBot:true"
+    # DSpace stores DSpaceObject type constants as integers in Solr; ITEM is 2.
+    common = "statistics_type:view AND type:2 AND -isBot:true"
     events = _request({"q": "*:*", "rows": 0, "wt": "json"})
     total = _request({"q": common, "rows": 0, "wt": "json"})
     start = "2000-01-01T00:00:00Z" if all_time else f"{selected_year}-01-01T00:00:00Z"
